@@ -102,7 +102,31 @@ func (h *UserHandler) GetUserByID(ctx echo.Context) error {
 
 func (h *UserHandler) UpdateUser(ctx echo.Context) error {
 	id := ctx.Param("id")
-	return ctx.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("Succesfully Update User By ID : %s", id)})
+
+	var input struct {
+		Nim    string `json:"nim"`
+		Nama   string `json:"nama"`
+		Alamat string `json:"alamat"`
+	}
+	if err := ctx.Bind(&input); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": "Failed to Bind Input"})
+	}
+
+	query := h.db.Model(&User{}).Where("id = ?", id)
+	if input.Nim != "" {
+		query = query.Update("nim", input.Nim)
+	}
+	if input.Nama != "" {
+		query = query.Update("nama", input.Nama)
+	}
+	if input.Alamat != "" {
+		query = query.Update("alamat", input.Alamat)
+	}
+	if err := query.Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Update User By ID", "error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{"message": fmt.Sprintf("Succesfully Update User By ID : %s", id), "data": input})
 }
 
 func (h *UserHandler) DeleteUser(ctx echo.Context) error {
