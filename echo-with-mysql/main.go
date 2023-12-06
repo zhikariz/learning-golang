@@ -53,6 +53,13 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{db: db}
 }
 
+type UserRequest struct {
+	ID     string `param:"id"`
+	Nim    string `json:"nim"`
+	Nama   string `json:"nama"`
+	Alamat string `json:"alamat"`
+}
+
 func (h *UserHandler) GetAllUsers(ctx echo.Context) error {
 	search := ctx.QueryParam("search")
 	users := make([]*User, 0)
@@ -67,11 +74,7 @@ func (h *UserHandler) GetAllUsers(ctx echo.Context) error {
 }
 
 func (h *UserHandler) CreateUser(ctx echo.Context) error {
-	var input struct {
-		Nim    string `json:"nim"`
-		Nama   string `json:"nama"`
-		Alamat string `json:"alamat"`
-	}
+	var input UserRequest
 	if err := ctx.Bind(&input); err != nil {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": "Failed to Bind Input"})
 	}
@@ -90,30 +93,27 @@ func (h *UserHandler) CreateUser(ctx echo.Context) error {
 }
 
 func (h *UserHandler) GetUserByID(ctx echo.Context) error {
-	id := ctx.Param("id")
-
-	user := new(User)
-
-	if err := h.db.Where("id =?", id).First(&user).Error; err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Get User By ID"})
-	}
-
-	return ctx.JSON(http.StatusOK, map[string]interface{}{"message": fmt.Sprintf("Succesfully Get User By ID : %s", id), "data": user})
-}
-
-func (h *UserHandler) UpdateUser(ctx echo.Context) error {
-	id := ctx.Param("id")
-
-	var input struct {
-		Nim    string `json:"nim"`
-		Nama   string `json:"nama"`
-		Alamat string `json:"alamat"`
-	}
+	var input UserRequest
 	if err := ctx.Bind(&input); err != nil {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": "Failed to Bind Input"})
 	}
 
-	userID, _ := strconv.Atoi(id)
+	user := new(User)
+
+	if err := h.db.Where("id =?", input.ID).First(&user).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Get User By ID"})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{"message": fmt.Sprintf("Succesfully Get User By ID : %s", input.ID), "data": user})
+}
+
+func (h *UserHandler) UpdateUser(ctx echo.Context) error {
+	var input UserRequest
+	if err := ctx.Bind(&input); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": "Failed to Bind Input"})
+	}
+
+	userID, _ := strconv.Atoi(input.ID)
 
 	user := User{
 		ID:     int64(userID),
@@ -122,18 +122,21 @@ func (h *UserHandler) UpdateUser(ctx echo.Context) error {
 		Alamat: input.Alamat,
 	}
 
-	query := h.db.Model(&User{}).Where("id = ?", id)
+	query := h.db.Model(&User{}).Where("id = ?", userID)
 	if err := query.Updates(&user).Error; err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Update User By ID", "error": err.Error()})
 	}
 
-	return ctx.JSON(http.StatusOK, map[string]interface{}{"message": fmt.Sprintf("Succesfully Update User By ID : %s", id), "data": input})
+	return ctx.JSON(http.StatusOK, map[string]interface{}{"message": fmt.Sprintf("Succesfully Update User By ID : %s", input.ID), "data": input})
 }
 
 func (h *UserHandler) DeleteUser(ctx echo.Context) error {
-	id := ctx.Param("id")
+	var input UserRequest
+	if err := ctx.Bind(&input); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": "Failed to Bind Input"})
+	}
 
-	if err := h.db.Delete(&User{}, id).Error; err != nil {
+	if err := h.db.Delete(&User{}, input.ID).Error; err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Delete User By ID"})
 	}
 	return ctx.JSON(http.StatusNoContent, nil)
