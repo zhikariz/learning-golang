@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -112,17 +113,17 @@ func (h *UserHandler) UpdateUser(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": "Failed to Bind Input"})
 	}
 
+	userID, _ := strconv.Atoi(id)
+
+	user := User{
+		ID:     int64(userID),
+		Nim:    input.Nim,
+		Nama:   input.Nama,
+		Alamat: input.Alamat,
+	}
+
 	query := h.db.Model(&User{}).Where("id = ?", id)
-	if input.Nim != "" {
-		query = query.Update("nim", input.Nim)
-	}
-	if input.Nama != "" {
-		query = query.Update("nama", input.Nama)
-	}
-	if input.Alamat != "" {
-		query = query.Update("alamat", input.Alamat)
-	}
-	if err := query.Error; err != nil {
+	if err := query.Updates(&user).Error; err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Update User By ID", "error": err.Error()})
 	}
 
@@ -130,6 +131,11 @@ func (h *UserHandler) UpdateUser(ctx echo.Context) error {
 }
 
 func (h *UserHandler) DeleteUser(ctx echo.Context) error {
+	id := ctx.Param("id")
+
+	if err := h.db.Delete(&User{}, id).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Delete User By ID"})
+	}
 	return ctx.JSON(http.StatusNoContent, nil)
 }
 
