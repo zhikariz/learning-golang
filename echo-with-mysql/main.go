@@ -90,7 +90,14 @@ func (h *UserHandler) CreateUser(ctx echo.Context) error {
 
 func (h *UserHandler) GetUserByID(ctx echo.Context) error {
 	id := ctx.Param("id")
-	return ctx.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("Succesfully Get User By ID : %s", id)})
+
+	user := new(User)
+
+	if err := h.db.Where("id =?", id).First(&user).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to Get User By ID"})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{"message": fmt.Sprintf("Succesfully Get User By ID : %s", id), "data": user})
 }
 
 func (h *UserHandler) UpdateUser(ctx echo.Context) error {
